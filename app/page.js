@@ -13,6 +13,7 @@ export default function Home() {
   const recognitionRef = useRef(null);
 
   useEffect(() => {
+    // Check for browser support
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
@@ -32,7 +33,7 @@ export default function Home() {
         setIsListening(false);
       };
     } else {
-      setStatus('Browser not supported. Use Chrome/Edge.');
+      setStatus('Browser not supported. Use Chrome or Edge.');
     }
   }, [targetLang]);
 
@@ -52,13 +53,24 @@ export default function Home() {
         speak(data.translated_text);
       }
     } catch (error) {
+      console.error(error);
       setStatus('Translation failed');
     }
   };
 
   const speak = (text) => {
+    // Stop any current speech to avoid overlap
+    window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = targetLang; // e.g., 'es-ES'
+    utterance.lang = targetLang; 
+    
+    // Optional: Try to find a specific voice for better quality
+    // This part is browser-dependent.
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find(v => v.lang.startsWith(targetLang));
+    if (voice) utterance.voice = voice;
+
     window.speechSynthesis.speak(utterance);
   };
 
@@ -66,11 +78,12 @@ export default function Home() {
     if (isListening) {
       recognitionRef.current.stop();
     } else {
-      recognitionRef.current.start();
-      setIsListening(true);
-      setStatus('Listening...');
+      // Clear previous text
       setText('');
       setTranslatedText('');
+      setStatus('Listening...');
+      setIsListening(true);
+      recognitionRef.current.start();
     }
   };
 
@@ -79,15 +92,24 @@ export default function Home() {
       <h1>🎙️ Web Voice Translator</h1>
       
       <div style={{ margin: '20px 0' }}>
+        <label style={{ marginRight: '10px', fontWeight: 'bold' }}>Translate to:</label>
         <select 
           value={targetLang} 
           onChange={(e) => setTargetLang(e.target.value)}
-          style={{ padding: '10px', fontSize: '16px' }}
+          style={{ padding: '10px', fontSize: '16px', borderRadius: '5px', border: '1px solid #ccc' }}
         >
-          <option value="es">Spanish (Español)</option>
-          <option value="fr">French (Français)</option>
-          <option value="de">German (Deutsch)</option>
-          <option value="ja">Japanese (日本語)</option>
+          <optgroup label="International">
+            <option value="es">Spanish (Español)</option>
+            <option value="fr">French (Français)</option>
+            <option value="de">German (Deutsch)</option>
+            <option value="ja">Japanese (日本語)</option>
+          </optgroup>
+          <optgroup label="Indian Languages">
+            <option value="hi">Hindi (हिंदी)</option>
+            <option value="kn">Kannada (कन्नड़)</option>
+            <option value="ta">Tamil (தமிழ்)</option>
+            <option value="te">Telugu (తెలుగు)</option>
+          </optgroup>
         </select>
       </div>
 
@@ -100,27 +122,28 @@ export default function Home() {
           color: 'white', 
           border: 'none',
           cursor: 'pointer',
-          marginBottom: '20px'
+          marginBottom: '20px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
         }}
       >
         {isListening ? <MicOff size={32} /> : <Mic size={32} />}
       </button>
 
-      <p style={{ color: '#666' }}>{status}</p>
+      <p style={{ color: '#666', minHeight: '24px' }}>{status}</p>
 
       <div style={{ display: 'grid', gap: '20px', textAlign: 'left' }}>
         <div style={{ padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
           <strong>You said:</strong>
-          <p>{text || '...'}</p>
+          <p style={{ fontSize: '1.1em', marginTop: '10px' }}>{text || '...'}</p>
         </div>
         
         <div style={{ padding: '20px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f0f9ff' }}>
           <strong>Translation:</strong>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <p>{translatedText || '...'}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+            <p style={{ fontSize: '1.2em', margin: 0 }}>{translatedText || '...'}</p>
             {translatedText && (
-              <button onClick={() => speak(translatedText)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                <Volume2 size={20} />
+              <button onClick={() => speak(translatedText)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0070f3' }}>
+                <Volume2 size={24} />
               </button>
             )}
           </div>
